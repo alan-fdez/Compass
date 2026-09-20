@@ -1,6 +1,6 @@
 # Compass
 
-[![CI](https://github.com/AlansitoFdez/Compass/actions/workflows/ci.yml/badge.svg)](https://github.com/AlansitoFdez/Compass/actions/workflows/ci.yml)
+[![CI](https://github.com/alan-fdez/Compass/actions/workflows/ci.yml/badge.svg)](https://github.com/alan-fdez/Compass/actions/workflows/ci.yml)
 
 **Radar de licitaciones públicas españolas.** [PLACSP](https://contrataciondelestado.es) publica del orden de 800 anuncios cada día. Compass los ingiere, deja los pocos que encajan con tu empresa, y lee el pliego de esos pocos para decirte —con la cláusula y la página delante— si puedes presentarte.
 
