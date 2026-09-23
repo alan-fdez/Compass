@@ -114,10 +114,10 @@ jobs:
         run: uv run python -m compass.providers.seed
 
       - name: Tests
-        # -m "not real_corpus": three tests assert against the real PLACSP corpus
-        # persisted on the developer's machine, which no runner has. See
-        # docs/phases/phase4/subphases/phase4.6.md for the exact list and why faking
-        # that corpus would make them prove nothing.
+        # -m "not real_corpus": five tests assert against the real PLACSP corpus
+        # persisted on the developer's machine, which no runner has. Why faking that
+        # corpus would make them prove nothing: docs/phases/phase4/subphases/phase4.6.md
+        # (written when there were three; two more were marked later).
         run: uv run pytest -m "not real_corpus"
 
   frontend:

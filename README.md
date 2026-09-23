@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/alan-fdez/Compass/actions/workflows/ci.yml/badge.svg)](https://github.com/alan-fdez/Compass/actions/workflows/ci.yml)
 
-**Radar de licitaciones públicas españolas.** [PLACSP](https://contrataciondelestado.es) publica del orden de 800 anuncios cada día. Compass los ingiere, deja los pocos que encajan con tu empresa, y lee el pliego de esos pocos para decirte —con la cláusula y la página delante— si puedes presentarte.
+**Radar de licitaciones públicas españolas.** [PLACSP](https://contrataciondelestado.es) publica del orden de 800 anuncios cada día. Compass los ingiere, deja los pocos que encajan con tu empresa, y lee el pliego de esos pocos para decirte, con la cláusula y la página delante, si puedes presentarte.
 
 No es un buscador de subvenciones: son contratos que la administración compra, no dinero que reparte.
 
@@ -19,15 +19,15 @@ docker compose up -d
 
 Eso levanta Postgres, Redis, la API, el worker, el planificador y el dashboard, y aplica las migraciones por el camino. El dashboard queda en **http://localhost:3000** y la API en **http://localhost:8000/docs**.
 
-**Ninguna clave es obligatoria.** Con el `.env` recién copiado y vacío, todo funciona salvo el agente: la ingesta, el embudo, el ranking híbrido y el dashboard entero. Cuando pulses «analizar el pliego», la pantalla te dirá qué falta en vez de fallar. Para desbloquearlo, una clave gratuita de [openrouter.ai](https://openrouter.ai) en `OPENROUTER_API_KEY` — nivel gratuito, 50 peticiones al día, 0 €. Las de [Langfuse](https://langfuse.com) son opcionales y sólo sirven para ver el coste real de cada análisis.
+**Ninguna clave es obligatoria.** Con el `.env` recién copiado y vacío, todo funciona salvo el agente: la ingesta, el embudo, el ranking híbrido y el dashboard entero. Cuando pulses «analizar el pliego», la pantalla te dirá qué falta en vez de fallar. Para desbloquearlo, una clave gratuita de [openrouter.ai](https://openrouter.ai) en `OPENROUTER_API_KEY` (nivel gratuito, 50 peticiones al día, 0 €). Las de [Langfuse](https://langfuse.com) son opcionales y sólo sirven para ver el coste real de cada análisis.
 
-La primera vez, el dashboard te pide el perfil de tu empresa: a qué te dedicas, tus CPV, tu rango de importe, tu facturación y tus certificaciones. Al guardarlo se descargan los últimos tres meses de PLACSP —unos minutos, con el avance en pantalla— y a partir de ahí la ingesta diaria corre sola a las 03:00.
+La primera vez, el dashboard te pide el perfil de tu empresa: a qué te dedicas, tus CPV, tu rango de importe, tu facturación y tus certificaciones. Al guardarlo se descargan los últimos tres meses de PLACSP (unos minutos, con el avance en pantalla) y a partir de ahí la ingesta diaria corre sola a las 03:00.
 
 ## Cómo funciona
 
 **1. Ingesta.** El feed ATOM/CODICE de PLACSP, leído de forma incremental con una marca de agua sobre `atom:updated`, filtrado al vertical de servicios informáticos (CPV 72) y persistido con *upsert* por expediente: una licitación republicada actualiza su fila, nunca crea otra ni se borra. En la instalación de desarrollo eso son **5.363 licitaciones**.
 
-**2. El embudo.** Tres etapas que reducen ese corpus al puñado que encaja con un proveedor concreto, y **ninguna pasa por un modelo**: filtros duros en SQL (plazo, CPV, importe, ámbito), recuperación híbrida —léxica con `tsvector` y semántica con pgvector— y fusión de los dos rankings por *Reciprocal Rank Fusion*. Es determinista y se puede auditar línea a línea.
+**2. El embudo.** Tres etapas que reducen ese corpus al puñado que encaja con un proveedor concreto, y **ninguna pasa por un modelo**: filtros duros en SQL (plazo, CPV, importe, ámbito), recuperación híbrida (léxica con `tsvector` y semántica con pgvector) y fusión de los dos rankings por *Reciprocal Rank Fusion*. Es determinista y se puede auditar línea a línea.
 
 **3. El agente.** Bajo demanda, un grafo de LangGraph descarga el PCAP, comprueba que tiene capa de texto y se lo pasa entero al modelo contra un esquema Pydantic cerrado: solvencia económica y técnica, certificaciones, criterios de adjudicación, garantías, plazos, subcontratación y lotes. **Cada valor viaja con su cita**: cláusula, página y texto literal.
 
@@ -39,7 +39,7 @@ La primera vez, el dashboard te pide el perfil de tu empresa: a qué te dedicas,
 
 ### El modelo extrae; el veredicto lo calcula el código
 
-El LLM no opina nunca sobre si puedes presentarte. Rellena un esquema cerrado, y el veredicto sale de comparar esos datos con tu perfil en Python plano. Eso lo hace determinista —el mismo pliego y el mismo perfil dan siempre lo mismo—, auditable —cada razón enseña la cláusula que la sostiene— y barato de recalcular: el veredicto no se guarda, se recalcula al leerlo, así que editar tu perfil cambia todos los veredictos al instante sin volver a pagar un solo análisis.
+El LLM no opina nunca sobre si puedes presentarte. Rellena un esquema cerrado, y el veredicto sale de comparar esos datos con tu perfil en Python plano. Eso lo hace determinista (el mismo pliego y el mismo perfil dan siempre lo mismo), auditable (cada razón enseña la cláusula que la sostiene) y barato de recalcular: el veredicto no se guarda, se recalcula al leerlo, así que editar tu perfil cambia todos los veredictos al instante sin volver a pagar un solo análisis.
 
 ### Las citas se verifican en Python, no se creen
 
@@ -51,7 +51,7 @@ La comprobación distingue **tres resultados, no dos**, y la razón es el format
 
 Con el perfil sembrado, el embudo deja hoy **5.363 → 104 → 35 → 10**, y de esas 10 finales **6 las trajo únicamente el recuperador vectorial**: comparten significado con el perfil sin compartir sus palabras, así que una búsqueda por palabras clave las habría perdido enteras. Eso es exactamente por lo que hay dos recuperadores y no uno.
 
-Un detalle de esos números que merece contarse: la primera etapa filtraba sólo por el código de estado que publica PLACSP, y hoy dejaría pasar 1.740. Pero PLACSP no mueve ese código de forma fiable al vencer el plazo — **1.636 de esas 1.740 (el 94%) tienen la fecha límite ya pasada**. Ahora la etapa exige las dos cosas, y por eso el número es tan pequeño: son las que de verdad se pueden presentar hoy.
+Un detalle de esos números que merece contarse: la primera etapa filtraba sólo por el código de estado que publica PLACSP, y hoy dejaría pasar 1.740. Pero PLACSP no mueve ese código de forma fiable al vencer el plazo: **1.636 de esas 1.740 (el 94%) tienen la fecha límite ya pasada**. Ahora la etapa exige las dos cosas, y por eso el número es tan pequeño: son las que de verdad se pueden presentar hoy.
 
 ### Qué cuesta de verdad analizar un pliego
 
@@ -87,9 +87,9 @@ Python 3.13 con `mypy --strict` · FastAPI async sobre Uvicorn · PostgreSQL 17 
 
 ### Limitaciones conocidas
 
-**Qué puede rechazarte, y quién decide que puede.** Un pliego nombra certificaciones en tres papeles —exigidas para licitar, puntuadas como criterio de adjudicación, o papeleo que presenta cualquier licitador— y sólo el primero excluye. El esquema no tenía dónde decirlo, así que el veredicto trataba las tres como requisitos y salían **NO APTO falsos**: cuatro de los seis análisis de la base de desarrollo los tenían. Ahora cada certificación viaja con su papel y su cita.
+**Qué puede rechazarte, y quién decide que puede.** Un pliego nombra certificaciones en tres papeles (exigidas para licitar, puntuadas como criterio de adjudicación, o papeleo que presenta cualquier licitador) y sólo el primero excluye. El esquema no tenía dónde decirlo, así que el veredicto trataba las tres como requisitos y salían **NO APTO falsos**: cuatro de los seis análisis de la base de desarrollo los tenían. Ahora cada certificación viaja con su papel y su cita.
 
-Pero el papel lo rellena el modelo, y **medido sobre tres pliegos reales, no lo rellena bien**: devolvió «exigida para licitar» en todos los casos, incluidos cuatro perfiles de equipo («Responsable técnico del proyecto») y una declaración responsable. Así que el código no se fía: una certificación sólo bloquea si además es un esquema reconocible —ISO, UNE-EN, ENS, CMMI, CCN-CERT, ENAC—. Lo que no lo es aparece como **reserva**, con su cláusula citada, para que lo compruebes tú. Un APTO CON RESERVAS de más cuesta leer un pliego; un NO APTO de más cuesta un contrato que nunca llegaste a ver.
+Pero el papel lo rellena el modelo, y **medido sobre tres pliegos reales, no lo rellena bien**: devolvió «exigida para licitar» en todos los casos, incluidos cuatro perfiles de equipo («Responsable técnico del proyecto») y una declaración responsable. Así que el código no se fía: una certificación sólo bloquea si además es un esquema reconocible: ISO, UNE-EN, ENS, CMMI, CCN-CERT o ENAC. Lo que no lo es aparece como **reserva**, con su cláusula citada, para que lo compruebes tú. Un APTO CON RESERVAS de más cuesta leer un pliego; un NO APTO de más cuesta un contrato que nunca llegaste a ver.
 
 Es el mismo principio que el resto del proyecto: el modelo extrae, el código decide. Aquí decide incluso sobre lo que el modelo afirma de sí mismo.
 
@@ -114,8 +114,8 @@ Cinco tests quedan fuera de CI (`@pytest.mark.real_corpus`): comparan el golden 
 
 ## El razonamiento completo
 
-Este README cuenta qué es y cómo funciona. **El porqué de cada decisión —con lo que se midió, lo que se descartó y lo que salió mal por el camino— vive en [`docs/phases/`](docs/phases/)**: un documento por subfase, escrito mientras se construía, con la evidencia delante. Ahí está por qué el veredicto no lo emite el modelo, por qué el embudo es híbrido, por qué el golden set tiene 25 pliegos y no 4, y qué encontró cada revisión.
+Este README cuenta qué es y cómo funciona. **El porqué de cada decisión (con lo que se midió, lo que se descartó y lo que salió mal por el camino) vive en [`docs/phases/`](docs/phases/)**: un documento por subfase, escrito mientras se construía, con la evidencia delante. Ahí está por qué el veredicto no lo emite el modelo, por qué el embudo es híbrido, por qué el golden set tiene 25 pliegos y no 4, y qué encontró cada revisión.
 
 ## Licencia
 
-[MIT](LICENSE). Descárgalo, ejecútalo, cámbialo o reutiliza lo que te sirva; lo único que pide es que el aviso de copyright viaje con el código. Sin garantía de ningún tipo: esto lee pliegos y te da una opinión calculada, no asesoramiento jurídico — la decisión de presentarte a una licitación sigue siendo tuya.
+[MIT](LICENSE). Descárgalo, ejecútalo, cámbialo o reutiliza lo que te sirva; lo único que pide es que el aviso de copyright viaje con el código. Sin garantía de ningún tipo: esto lee pliegos y te da una opinión calculada, no asesoramiento jurídico. La decisión de presentarte a una licitación sigue siendo tuya.
